@@ -1,5 +1,4 @@
-*.hi
-*.ho
+dist
 cabal.sandbox.config
 .cabal-sandbox
 *.swp
