@@ -56,7 +56,7 @@ rvalue = (RConstant <$> constant)
 --  <|> (RTernary <$> rvalue <*> rvalue <*> rvalue)
 --  <|> (RCall <$> rvalue <*> parens (commaSep rvalue))
 
-assign = toAssign <$> (string "=" *> optional binary)
+assign = toAssign <$> (string "=" *> optional binary) <* spaces
   where toAssign Nothing   = Assign
         toAssign (Just op) = AssignWith op
 
