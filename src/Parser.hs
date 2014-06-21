@@ -79,7 +79,5 @@ constant =
   stringLiteral
 
 name = alpha `before` many alpha_digit
-
-alpha_digit = alpha <|> digit
-
-alpha = letter <|> char '_'
+  where alpha       = letter <|> char '_'
+        alpha_digit = alpha <|> digit
