@@ -12,22 +12,12 @@ import Text.Trifecta.Delta
 parse :: Parser a -> String -> Result a
 parse p s = parseString p (Columns 0 0) s
 
-
 -- combinators
-mnOf :: CharParsing m => m a -> Int -> Int -> m [a]
-mnOf p m n = undefined -- TODO
-
-before :: CharParsing m => m a -> m [a] -> m [a]
-before p q = (:) <$> p <*> q
-
 term :: CharParsing m => String -> m String
 term s = string s <* spaces
 
 termTo :: CharParsing m => String -> a -> m a
 termTo s v = term s *> pure v
-
-terms :: CharParsing m => [String] -> m String
-terms = choice . map term
 
 -- nonterminals
 program = Program <$> many definition
@@ -104,3 +94,4 @@ constant = (NatLit <$> natural)
 name = (alpha `before` many alpha_digit) <* spaces
   where alpha       = letter <|> char '_'
         alpha_digit = alpha <|> digit
+        before p q  = (:) <$> p <*> q
