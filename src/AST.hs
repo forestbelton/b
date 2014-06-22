@@ -46,7 +46,7 @@ data UnaryOp = ArithNegate | LogicNegate | AddressOf
 
 data BinOp = And | Equal | NotEqual | LessThan | LessThanEqual | GreaterThan
  | GreaterThanEqual | LeftShift | RightShift | Subtract | Add | Modulo
- | Multiply | Divide
+ | Multiply | Divide | Or
   deriving (Show)
 
 data LValue = Name String | Deref RValue | Index RValue RValue

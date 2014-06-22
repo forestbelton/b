@@ -19,6 +19,11 @@ term s = string s <* spaces
 termTo :: CharParsing m => String -> a -> m a
 termTo s v = term s *> pure v
 
+bin_expr sub ops = chainl1 sub bin_ops
+  where bin_ops    = foldr1 (<|>) $ map (uncurry bin_op) ops
+        bin_op s v = (RBinary ??) <$> (term s *> pure v)
+        (??) f y x = f x y
+
 -- nonterminals
 program = Program <$> many definition
 
@@ -45,16 +50,30 @@ statement = autos
 autos = Auto <$> (term "auto" *> 
   (commaSep1 ((,) <$> name <*> optional constant)) <* semi) <*> statement
 
--- TODO: Remove left recursion here
-rvalue = (RConstant <$> constant)
+rvalue = parens rvalue
+  <|> or_expr
+--  <|> function call
+--  <|> (RCall <$> rvalue <*> parens (commaSep rvalue))
+
+or_expr    = bin_expr and_expr   [("|", Or)]
+and_expr   = bin_expr eq_expr    [("&", And)]
+eq_expr    = bin_expr rel_expr   [("==", Equal), ("!=", NotEqual)]
+rel_expr   = bin_expr shift_expr
+  [("<=", LessThanEqual), ("<", LessThan), (">=", GreaterThanEqual),
+   (">", GreaterThan)]
+shift_expr = bin_expr add_expr   [(">>", RightShift), ("<<", LeftShift)]
+add_expr   = bin_expr mult_expr  [("+", Add), ("-", Subtract)]
+mult_expr  = bin_expr unary_expr
+  [("*", Multiply), ("/", Divide), ("%", Modulo)]
+
+unary_expr = (RUnary <$> unary <*> rvalue)
+  <|> (RLVal <$> lvalue)
+  <|> (RConstant <$> constant)
   <|> try (RAssign <$> lvalue <*> assign <*> rvalue)
   <|> (RPreIncDec <$> inc_dec <*> lvalue)
   <|> try (RPostIncDec <$> lvalue <*> inc_dec)
-  <|> (RUnary <$> unary <*> rvalue)
-  <|> (RLVal <$> lvalue)
---  <|> (RBinary <$> rvalue <*> binary <*> rvalue)
---  <|> (RTernary <$> rvalue <*> rvalue <*> rvalue)
---  <|> (RCall <$> rvalue <*> parens (commaSep rvalue))
+  where unary = (termTo "-" ArithNegate) <|> (termTo "!" LogicNegate)
+                  <|> (termTo "&" AddressOf)
 
 assign = toAssign <$> (string "=" *> optional binary) <* spaces
   where toAssign Nothing   = Assign
@@ -62,10 +81,6 @@ assign = toAssign <$> (string "=" *> optional binary) <* spaces
 
 inc_dec = (termTo "++" Inc)
   <|> (termTo "--" Dec)
-
-unary = (termTo "-" ArithNegate)
-  <|> (termTo "!" LogicNegate)
-  <|> (termTo "&" AddressOf)
 
 binary = (termTo "&" And)
   <|> (termTo "==" Equal)
