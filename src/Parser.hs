@@ -19,6 +19,8 @@ term s = string s <* spaces
 termTo :: CharParsing m => String -> a -> m a
 termTo s v = term s *> pure v
 
+terms = foldr1 (<|>) . map (uncurry termTo)
+
 bin_expr sub ops = chainl1 sub bin_ops
   where bin_ops    = foldr1 (<|>) $ map (uncurry bin_op) ops
         bin_op s v = (RBinary ??) <$> (term s *> pure v)
@@ -72,30 +74,18 @@ unary_expr = (RUnary <$> unary <*> rvalue)
   <|> try (RAssign <$> lvalue <*> assign <*> rvalue)
   <|> (RPreIncDec <$> inc_dec <*> lvalue)
   <|> try (RPostIncDec <$> lvalue <*> inc_dec)
-  where unary = (termTo "-" ArithNegate) <|> (termTo "!" LogicNegate)
-                  <|> (termTo "&" AddressOf)
+  where unary = terms [("-", ArithNegate), ("!", LogicNegate), ("&", AddressOf)]
 
 assign = toAssign <$> (string "=" *> optional binary) <* spaces
   where toAssign Nothing   = Assign
         toAssign (Just op) = AssignWith op
 
-inc_dec = (termTo "++" Inc)
-  <|> (termTo "--" Dec)
+inc_dec = terms [("++", Inc), ("--", Dec)]
 
-binary = (termTo "&" And)
-  <|> (termTo "==" Equal)
-  <|> (termTo "!=" NotEqual)
-  <|> try (termTo "<=" LessThanEqual)
-  <|> try (termTo ">=" GreaterThanEqual)
-  <|> try (termTo "<<" LeftShift)
-  <|> try (termTo ">>" RightShift)
-  <|> (termTo ">"  GreaterThan)
-  <|> (termTo "<"  LessThan)
-  <|> (termTo "-"  Subtract)
-  <|> (termTo "+"  Add)
-  <|> (termTo "%"  Modulo)
-  <|> (termTo "*"  Multiply)
-  <|> (termTo "/"  Divide)
+binary = terms [("&", And), ("==", Equal), ("!=", NotEqual),
+  ("<=", LessThanEqual), (">=", GreaterThanEqual), ("<<", LeftShift),
+  (">>", RightShift), (">", GreaterThan), ("<", LessThan), ("-", Subtract),
+  ("+", Add), ("%", Modulo), ("*", Multiply), ("/", Divide), ("|", Or)]
 
 -- TODO: Remove left recursion here
 lvalue = (Name <$> name)
