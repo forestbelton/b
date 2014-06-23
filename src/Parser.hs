@@ -52,42 +52,47 @@ statement = autos
 autos = Auto <$> (term "auto" *> 
   (commaSep1 ((,) <$> name <*> optional constant)) <* semi) <*> statement
 
-rvalue = parens rvalue
-  <|> or_expr
---  <|> function call
---  <|> (RCall <$> rvalue <*> parens (commaSep rvalue))
+rvalue = assign_expr
 
-or_expr    = bin_expr and_expr   [("|", Or)]
-and_expr   = bin_expr eq_expr    [("&", And)]
-eq_expr    = bin_expr rel_expr   [("==", Equal), ("!=", NotEqual)]
+primary_expr = (RLVal <$> lvalue)
+  <|> (RConstant <$> constant)
+  <|> parens assign_expr
+
+-- TODO: Support postfix ++, --
+postfix_expr = try (RCall <$> primary_expr <*> parens (commaSep assign_expr))
+  <|> primary_expr
+
+unary_expr = try (RUnary <$> unary_op <*> unary_expr)
+  <|> postfix_expr
+  where unary_op = terms [("&", AddressOf), ("!", ArithNegate),
+                          ("-", ArithNegate), ("++", Inc), ("--", Dec)]
+
+mult_expr  = bin_expr unary_expr
+  [("*", Multiply), ("/", Divide), ("%", Modulo)]
+add_expr   = bin_expr mult_expr  [("+", Add), ("-", Subtract)]
+shift_expr = bin_expr add_expr   [(">>", RightShift), ("<<", LeftShift)]
 rel_expr   = bin_expr shift_expr
   [("<=", LessThanEqual), ("<", LessThan), (">=", GreaterThanEqual),
    (">", GreaterThan)]
-shift_expr = bin_expr add_expr   [(">>", RightShift), ("<<", LeftShift)]
-add_expr   = bin_expr mult_expr  [("+", Add), ("-", Subtract)]
-mult_expr  = bin_expr unary_expr
-  [("*", Multiply), ("/", Divide), ("%", Modulo)]
+eq_expr    = bin_expr rel_expr   [("==", Equal), ("!=", NotEqual)]
+and_expr   = bin_expr eq_expr    [("&", And)]
+or_expr    = bin_expr and_expr   [("|", Or)]
+cond_expr = try (RTernary <$> or_expr <*> (term "?" *> assign_expr <* term ":")
+                  <*> cond_expr)
+  <|> or_expr
 
-unary_expr = (RUnary <$> unary <*> rvalue)
-  <|> (RLVal <$> lvalue)
-  <|> (RConstant <$> constant)
-  <|> try (RAssign <$> lvalue <*> assign <*> rvalue)
-  <|> (RPreIncDec <$> inc_dec <*> lvalue)
-  <|> try (RPostIncDec <$> lvalue <*> inc_dec)
-  where unary = terms [("-", ArithNegate), ("!", LogicNegate), ("&", AddressOf)]
-
-assign = toAssign <$> (string "=" *> optional binary) <* spaces
-  where toAssign Nothing   = Assign
+assign_expr = try (RAssign <$> lvalue <*> assign <*> assign_expr)
+  <|> cond_expr
+  where assign = toAssign <$> (string "=" *> optional binary) <* spaces
+        toAssign Nothing   = Assign
         toAssign (Just op) = AssignWith op
-
-inc_dec = terms [("++", Inc), ("--", Dec)]
 
 binary = terms [("&", And), ("==", Equal), ("!=", NotEqual),
   ("<=", LessThanEqual), (">=", GreaterThanEqual), ("<<", LeftShift),
   (">>", RightShift), (">", GreaterThan), ("<", LessThan), ("-", Subtract),
   ("+", Add), ("%", Modulo), ("*", Multiply), ("/", Divide), ("|", Or)]
 
--- TODO: Remove left recursion here
+-- TODO: Support vector indexing
 lvalue = (Name <$> name)
   <|> (Deref <$> (term "*" *> rvalue))
 --  <|> (Index <$> rvalue <*> brackets rvalue)

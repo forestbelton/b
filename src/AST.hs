@@ -27,8 +27,6 @@ data Statement = Auto [(String, Maybe Constant)] Statement
 data RValue = RLVal LValue
   | RConstant Constant
   | RAssign LValue AssignOp RValue
-  | RPreIncDec IncDec LValue
-  | RPostIncDec LValue IncDec
   | RUnary UnaryOp RValue
   | RBinary RValue BinOp RValue
   | RTernary RValue RValue RValue
@@ -38,10 +36,7 @@ data RValue = RLVal LValue
 data AssignOp = Assign | AssignWith BinOp
   deriving (Show)
 
-data IncDec = Inc | Dec
-  deriving (Show)
-
-data UnaryOp = ArithNegate | LogicNegate | AddressOf
+data UnaryOp = ArithNegate | LogicNegate | AddressOf | Inc | Dec
   deriving (Show)
 
 data BinOp = And | Equal | NotEqual | LessThan | LessThanEqual | GreaterThan
