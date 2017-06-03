@@ -50,6 +50,7 @@ statement = autos
 autos = Auto <$> (term "auto" *> 
   (commaSep1 ((,) <$> name <*> optional constant)) <* semi) <*> statement
 
+rvalue :: (Monad m, TokenParsing m) => m RValue
 rvalue = assign_expr
 
 primary_expr = (RLVal <$> lvalue)
@@ -97,10 +98,12 @@ binop = terms [("&", And), ("==", Equal), ("!=", NotEqual),
   (">>", RightShift), (">", GreaterThan), ("<", LessThan), ("-", Subtract),
   ("+", Add), ("%", Modulo), ("*", Multiply), ("/", Divide), ("|", Or)]
 
--- TODO: Support vector indexing
-lvalue = (Name <$> name)
-  <|> (Deref <$> (term "*" *> rvalue))
---  <|> (Index <$> rvalue <*> brackets rvalue)
+lvalue :: (Monad m, TokenParsing m) => m LValue
+lvalue = combine <$> lvalue_h <*> many (brackets rvalue)
+  where lvalue_h = (Name <$> name) <|> (Deref <$> (term "*" *> rvalue))
+        combine h t = case t of
+                          []     -> h
+                          (x:xs) -> combine (Index (RLVal h) x) xs
 
 constant = (NatLit <$> natural)
   <|> (CharLit <$> stringLiteral')
