@@ -6,6 +6,9 @@ import AST
 
 import Control.Applicative
 import Text.Trifecta
+import Text.Parser.Expression
+import Text.Parser.Token
+import Text.Parser.Token.Style
 
 -- TODO: remove
 import Text.Trifecta.Delta
@@ -67,27 +70,36 @@ unary_expr = try (RUnary <$> unary_op <*> unary_expr)
   where unary_op = terms [("&", AddressOf), ("!", ArithNegate),
                           ("-", ArithNegate), ("++", Inc), ("--", Dec)]
 
-mult_expr  = bin_expr unary_expr
-  [("*", Multiply), ("/", Divide), ("%", Modulo)]
-add_expr   = bin_expr mult_expr  [("+", Add), ("-", Subtract)]
-shift_expr = bin_expr add_expr   [(">>", RightShift), ("<<", LeftShift)]
-rel_expr   = bin_expr shift_expr
-  [("<=", LessThanEqual), ("<", LessThan), (">=", GreaterThanEqual),
-   (">", GreaterThan)]
-eq_expr    = bin_expr rel_expr   [("==", Equal), ("!=", NotEqual)]
-and_expr   = bin_expr eq_expr    [("&", And)]
-or_expr    = bin_expr and_expr   [("|", Or)]
-cond_expr = try (RTernary <$> or_expr <*> (term "?" *> assign_expr <* term ":")
+binop_expr :: (Monad m, TokenParsing m) => m RValue
+binop_expr = buildExpressionParser binop_table unary_expr
+
+binop_table :: (Monad m, TokenParsing m) => [[Operator m RValue]]
+binop_table = [ [binary "*" Multiply, binary "/" Divide, binary "%" Modulo]
+              , [binary "+" Add, binary "-" Subtract]
+              , [binary ">>" RightShift, binary "<<" LeftShift]
+              , [binary "<=" LessThanEqual, binary "<" LessThan,
+                 binary ">=" GreaterThanEqual, binary ">" GreaterThan]
+              , [binary "==" Equal, binary "!=" NotEqual]
+              , [binary "&" And]
+              , [binary "|" Or]
+              ]
+
+binary name op = Infix (fun <$ reservedOp name) AssocLeft
+    where fun l r = RBinary l op r
+
+reservedOp name = reserve emptyOps name
+
+cond_expr = try (RTernary <$> binop_expr <*> (term "?" *> assign_expr <* term ":")
                   <*> cond_expr)
-  <|> or_expr
+  <|> binop_expr
 
 assign_expr = try (RAssign <$> lvalue <*> assign <*> assign_expr)
   <|> cond_expr
-  where assign = toAssign <$> (string "=" *> optional binary) <* spaces
+  where assign = toAssign <$> (string "=" *> optional binop) <* spaces
         toAssign Nothing   = Assign
         toAssign (Just op) = AssignWith op
 
-binary = terms [("&", And), ("==", Equal), ("!=", NotEqual),
+binop = terms [("&", And), ("==", Equal), ("!=", NotEqual),
   ("<=", LessThanEqual), (">=", GreaterThanEqual), ("<<", LeftShift),
   (">>", RightShift), (">", GreaterThan), ("<", LessThan), ("-", Subtract),
   ("+", Add), ("%", Modulo), ("*", Multiply), ("/", Divide), ("|", Or)]
