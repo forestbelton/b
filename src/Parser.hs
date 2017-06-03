@@ -24,11 +24,6 @@ termTo s v = term s *> pure v
 
 terms = foldr1 (<|>) . map (uncurry termTo)
 
-bin_expr sub ops = chainl1 sub bin_ops
-  where bin_ops    = foldr1 (<|>) $ map (uncurry bin_op) ops
-        bin_op s v = (RBinary ??) <$> (term s *> pure v)
-        (??) f y x = f x y
-
 -- nonterminals
 program = Program <$> many definition
 
