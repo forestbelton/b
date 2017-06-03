@@ -61,20 +61,15 @@ primary_expr = (RLVal <$> lvalue)
   <|> (RConstant <$> constant)
   <|> parens assign_expr
 
--- TODO: Support postfix ++, --
 postfix_expr = try (RCall <$> primary_expr <*> parens (commaSep assign_expr))
   <|> primary_expr
 
-unary_expr = try (RUnary <$> unary_op <*> unary_expr)
-  <|> postfix_expr
-  where unary_op = terms [("&", AddressOf), ("!", ArithNegate),
-                          ("-", ArithNegate), ("++", Inc), ("--", Dec)]
-
 binop_expr :: (Monad m, TokenParsing m) => m RValue
-binop_expr = buildExpressionParser binop_table unary_expr
+binop_expr = buildExpressionParser binop_table postfix_expr
 
 binop_table :: (Monad m, TokenParsing m) => [[Operator m RValue]]
-binop_table = [ [binary "*" Multiply, binary "/" Divide, binary "%" Modulo]
+binop_table = [ [unary "&" AddressOf, unary "!" ArithNegate, unary "-" ArithNegate, unary "++" Inc, unary "--" Dec, unaryp "++" Inc, unaryp "--" Dec]
+              , [binary "*" Multiply, binary "/" Divide, binary "%" Modulo]
               , [binary "+" Add, binary "-" Subtract]
               , [binary ">>" RightShift, binary "<<" LeftShift]
               , [binary "<=" LessThanEqual, binary "<" LessThan,
@@ -83,6 +78,9 @@ binop_table = [ [binary "*" Multiply, binary "/" Divide, binary "%" Modulo]
               , [binary "&" And]
               , [binary "|" Or]
               ]
+
+unary name op = Prefix $ RUnary op <$ reservedOp name
+unaryp name op = Postfix $ RUnaryP op <$ reservedOp name
 
 binary name op = Infix (fun <$ reservedOp name) AssocLeft
     where fun l r = RBinary l op r

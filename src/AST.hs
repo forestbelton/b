@@ -28,6 +28,7 @@ data RValue = RLVal LValue
   | RConstant Constant
   | RAssign LValue AssignOp RValue
   | RUnary UnaryOp RValue
+  | RUnaryP UnaryOp RValue
   | RBinary RValue BinOp RValue
   | RTernary RValue RValue RValue
   | RCall RValue [RValue]
