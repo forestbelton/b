@@ -18,8 +18,8 @@ cabal-version:       >=1.10
 
 executable b
   main-is:             Main.hs
-  other-modules:       AST
-                     , Parser
+  other-modules:       Language.B.AST
+                     , Language.B.Parser
   -- other-extensions:    
   build-depends:       base >= 4.9.1.0 && < 5
                      , trifecta >= 1.6.2.1 && < 1.7

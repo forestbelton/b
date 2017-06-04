@@ -1,8 +1,8 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module Parser where
+module Language.B.Parser where
 
-import AST
+import Language.B.AST
 
 import Control.Applicative
 import Text.Trifecta

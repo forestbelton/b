@@ -1,4 +1,4 @@
-module AST where
+module Language.B.AST where
 
 data Program = Program [Definition]
   deriving (Show)
