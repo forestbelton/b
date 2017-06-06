@@ -6,5 +6,7 @@ import System.Environment
 main :: IO ()
 main = do
     (fileName:_) <- getArgs
-    Just prgm <- parseProgram fileName
-    genProgram prgm
+    prgm' <- parseProgram fileName
+    case prgm' of
+        Just prgm -> genProgram prgm
+        _ -> return ()
