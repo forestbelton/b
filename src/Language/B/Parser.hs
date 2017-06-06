@@ -23,7 +23,7 @@ termTo s v = term s *> pure v
 terms = foldr1 (<|>) . map (uncurry termTo)
 
 -- nonterminals
-program = Program <$> many definition
+program = Program <$> (many definition <* eof)
 
 definition = try (Global <$> name <*> optional (brackets constant)
                 <*> (commaSep ival <* semi))
