@@ -10,10 +10,8 @@ import Text.Parser.Expression
 import Text.Parser.Token
 import Text.Parser.Token.Style
 
--- TODO: remove
-import Text.Trifecta.Delta
-parse :: Parser a -> String -> Result a
-parse p s = parseString p (Columns 0 0) s
+parseProgram :: String -> IO (Maybe Program)
+parseProgram fileName = parseFromFile program fileName
 
 -- combinators
 term :: CharParsing m => String -> m String
@@ -47,7 +45,7 @@ statement = autos
   <|> try (StatementVal <$> optional rvalue <* semi)
   <|> (Label <$> (name <* colon) <*> statement)
 
-autos = Auto <$> (term "auto" *> 
+autos = Auto <$> (term "auto" *>
   (commaSep1 ((,) <$> name <*> optional constant)) <* semi) <*> statement
 
 rvalue :: (Monad m, TokenParsing m) => m RValue
